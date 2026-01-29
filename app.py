@@ -1,21 +1,21 @@
-
 import streamlit as st
 import random, time
+import qrcode
+from PIL import Image
 
 st.set_page_config(page_title="Smart Bin System")
 
-
 st.title("♻ Smart Waste Bin – Eco Rewards")
 
-# 🔴 CHANGE THIS IP if needed
+# ✅ Public Streamlit URL
 APP_URL = "https://smart-bin-system.streamlit.app"
 
-
-
-
+# ---------------- QR CODE ----------------
 st.subheader("📱 Scan QR Code on the Bin")
-st.qr_code(APP_URL)
 
+qr = qrcode.make(APP_URL)
+qr = qr.resize((220, 220))
+st.image(qr)
 
 # --------- Waste detection reader ----------
 def get_detected_waste():
@@ -39,14 +39,14 @@ if user not in st.session_state.users:
     st.session_state.users[user] = {"weight": 0, "points": 0}
 
 st.success(f"Connected as {user} 🌱")
-current_waste = get_detected_waste()
 
+current_waste = get_detected_waste()
 st.subheader("🔍 Live Waste Detection")
+
 if current_waste:
     st.success(f"Detected: {current_waste}")
 else:
     st.info("Waiting for waste...")
-
 
 # --------- Smart bin automation ----------
 if st.button("🗑 Waste Deposited"):
@@ -102,9 +102,3 @@ for i, (u, d) in enumerate(
     sorted(st.session_state.users.items(),
            key=lambda x: x[1]["points"], reverse=True), 1):
     st.write(f"{i}. {u} — {int(d['points'])} pts")
-
-
-
-
-
-
