@@ -1,0 +1,6 @@
+streamlit
+qrcode
+Pillow
+ultralytics
+opencv-python
+streamlit-autorefresh
