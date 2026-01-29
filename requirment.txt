@@ -1,7 +1,5 @@
 streamlit
-qrcode
+qrcode[pil]
 Pillow
 ultralytics
 opencv-python
-streamlit-autorefresh==0.0.1
-
