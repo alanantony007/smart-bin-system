@@ -1,12 +1,10 @@
-from streamlit_autorefresh import st_autorefresh
+
 import streamlit as st
 import random, time
 import qrcode
 from PIL import Image
 
 st.set_page_config(page_title="Smart Bin System")
-# Auto refresh every 3 seconds
-st_autorefresh(interval=3000, key="bin_refresh")
 
 
 st.title("♻ Smart Waste Bin – Eco Rewards")
@@ -106,3 +104,4 @@ for i, (u, d) in enumerate(
     sorted(st.session_state.users.items(),
            key=lambda x: x[1]["points"], reverse=True), 1):
     st.write(f"{i}. {u} — {int(d['points'])} pts")
+
