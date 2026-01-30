@@ -1,16 +1,23 @@
 import streamlit as st
-import random, time
+import random, time, csv, os
 from datetime import datetime
 
-# 🔴 CHANGE THIS
-LOCAL_MODE = True   # True for laptop/bin, False for cloud
+# ---------------- CONFIG ----------------
+LOCAL_MODE = False   # True = local/bin demo | False = cloud demo
+USERS_FILE = "users.csv"
 
 st.set_page_config(page_title="Smart Bin System")
 st.title("♻ Smart Waste Bin – Eco Rewards")
 
-# ---------------- LOGIN CONTROL ----------------
+# ---------------- AUTO LOGIN VIA QR ----------------
+query_user = st.query_params.get("user", None)
+
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+
+if query_user and not st.session_state.logged_in:
+    st.session_state.logged_in = True
+    st.session_state.user = query_user
 
 # ---------------- LOGIN PAGE ----------------
 if not st.session_state.logged_in:
@@ -28,18 +35,43 @@ if not st.session_state.logged_in:
             st.success(f"Welcome {username} 🌱")
             st.rerun()
 
-    st.stop()
+    st.stop()  # ⛔ Stop everything before login
 
-# ---------------- USER INITIALIZATION ----------------
+# ---------------- CSV HELPERS ----------------
+def load_users():
+    users = {}
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE, newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                users[row["user"]] = {
+                    "weight": int(row["weight"]),
+                    "points": int(row["points"])
+                }
+    return users
+
+
+def save_users(users):
+    with open(USERS_FILE, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["user", "weight", "points"])
+        writer.writeheader()
+        for u, d in users.items():
+            writer.writerow({
+                "user": u,
+                "weight": d["weight"],
+                "points": int(d["points"])
+            })
+
+# ---------------- USER INIT ----------------
 user = st.session_state.user
 
 if "users" not in st.session_state:
-    st.session_state.users = {}
+    st.session_state.users = load_users()
 
 if user not in st.session_state.users:
     st.session_state.users[user] = {"weight": 0, "points": 0}
+    save_users(st.session_state.users)
 
-# ---------------- DEPOSIT LOG ----------------
 if "deposits" not in st.session_state:
     st.session_state.deposits = []
 
@@ -48,21 +80,17 @@ st.success(f"Connected as {user} 🌿")
 # ---------------- WASTE DETECTION ----------------
 def get_detected_waste():
     if LOCAL_MODE:
-        # 🔹 Real bin: read camera detection result
         try:
             with open("detected_waste.txt", "r") as f:
                 waste = f.read().strip()
                 if waste in ["Plastic", "Metal", "Paper"]:
                     return waste
-                else:
-                    return None
         except:
             return None
     else:
-        # 🔹 Cloud demo fallback
         return random.choice(["Plastic", "Metal", "Paper"])
 
-# ---------------- LIVE DETECTION DISPLAY ----------------
+# ---------------- LIVE DETECTION ----------------
 st.subheader("🔍 Live Waste Detection")
 
 current_waste = get_detected_waste()
@@ -88,11 +116,11 @@ if st.button("🗑 Waste Deposited"):
         else:
             points = weight * 0.5
 
-        # Update stats
         st.session_state.users[user]["weight"] += weight
         st.session_state.users[user]["points"] += points
 
-        # Log deposit
+        save_users(st.session_state.users)
+
         st.session_state.deposits.append({
             "user": user,
             "waste": waste,
@@ -100,12 +128,12 @@ if st.button("🗑 Waste Deposited"):
             "time": datetime.now().strftime("%d-%m-%Y %H:%M:%S")
         })
 
-        st.success(f"Detected Waste: {waste}")
+        st.success(f"Waste: {waste}")
         st.success(f"Weight: {weight} g")
         st.success(f"Points Earned: {int(points)}")
 
 # ---------------- USER STATS ----------------
-st.info(f"♻ Total Waste Deposited: {st.session_state.users[user]['weight']} g")
+st.info(f"♻ Total Waste: {st.session_state.users[user]['weight']} g")
 st.info(f"⭐ Total Points: {int(st.session_state.users[user]['points'])}")
 
 # ---------------- LAST DEPOSIT ----------------
@@ -131,7 +159,7 @@ st.metric("CO₂ Saved", f"{total_kg * 1.5:.2f} kg")
 st.metric("Trees Saved", f"{total_kg * 0.02:.2f}")
 
 # ---------------- LEADERBOARD ----------------
-st.subheader("🏆 Leaderboard")
+st.subheader("🏆 Leaderboard (Top Recyclers)")
 
 for i, (u, d) in enumerate(
     sorted(
