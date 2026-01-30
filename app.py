@@ -3,12 +3,15 @@ import random, time, csv, os
 from datetime import datetime
 
 # ---------------- CONFIG ----------------
-LOCAL_MODE = False   # True = local/bin demo | False = cloud demo
+LOCAL_MODE = False          # True = local/bin demo | False = cloud demo
+BIN_ID = "BIN-01"           # 🔹 Change this to simulate another bin
 USERS_FILE = "users.csv"
 COOLDOWN_SECONDS = 10
 
 st.set_page_config(page_title="Smart Bin System")
 st.title("♻ Smart Waste Bin – Eco Rewards")
+
+st.caption(f"🗑 Active Bin: {BIN_ID}")
 
 # ---------------- AUTO LOGIN VIA QR ----------------
 query_user = st.query_params.get("user", None)
@@ -139,6 +142,7 @@ if st.button("🗑 Waste Deposited"):
 
             deposit_entry = {
                 "user": user,
+                "bin": BIN_ID,
                 "waste": waste,
                 "weight": weight,
                 "time": datetime.now().strftime("%d-%m-%Y %H:%M:%S")
@@ -148,6 +152,7 @@ if st.button("🗑 Waste Deposited"):
 
             st.success(f"Waste: {waste}")
             st.success(f"Weight: {weight} g")
+            st.success(f"Bin: {BIN_ID}")
             st.success(f"Points Earned: {int(points)}")
 
 # ---------------- USER STATS ----------------
@@ -163,9 +168,9 @@ user_deposits = [
 ]
 
 if user_deposits:
-    for d in user_deposits[:5]:  # show last 5
+    for d in user_deposits[:5]:
         st.write(
-            f"• {d['time']} — {d['waste']} — {d['weight']} g"
+            f"• {d['time']} — {d['waste']} — {d['weight']} g — {d['bin']}"
         )
 else:
     st.info("No deposits yet.")
