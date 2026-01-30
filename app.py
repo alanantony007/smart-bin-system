@@ -35,7 +35,7 @@ if not st.session_state.logged_in:
             st.success(f"Welcome {username} 🌱")
             st.rerun()
 
-    st.stop()  # ⛔ Stop everything before login
+    st.stop()   # ⛔ Stop before dashboard
 
 # ---------------- CSV HELPERS ----------------
 def load_users():
@@ -76,6 +76,12 @@ if "deposits" not in st.session_state:
     st.session_state.deposits = []
 
 st.success(f"Connected as {user} 🌿")
+
+# ---------------- LOGOUT ----------------
+if st.button("🚪 Logout"):
+    st.session_state.logged_in = False
+    st.session_state.user = None
+    st.rerun()
 
 # ---------------- WASTE DETECTION ----------------
 def get_detected_waste():
@@ -118,7 +124,6 @@ if st.button("🗑 Waste Deposited"):
 
         st.session_state.users[user]["weight"] += weight
         st.session_state.users[user]["points"] += points
-
         save_users(st.session_state.users)
 
         st.session_state.deposits.append({
