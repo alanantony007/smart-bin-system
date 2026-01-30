@@ -119,8 +119,8 @@ if st.button("🗑 Waste Deposited"):
         st.warning(f"⏳ Please wait {remaining} seconds before next deposit")
     else:
         st.session_state.last_deposit_time = now
-
         waste = get_detected_waste()
+
         if waste is None:
             st.warning("No waste detected")
         else:
@@ -137,12 +137,14 @@ if st.button("🗑 Waste Deposited"):
             st.session_state.users[user]["points"] += points
             save_users(st.session_state.users)
 
-            st.session_state.deposits.append({
+            deposit_entry = {
                 "user": user,
                 "waste": waste,
                 "weight": weight,
                 "time": datetime.now().strftime("%d-%m-%Y %H:%M:%S")
-            })
+            }
+
+            st.session_state.deposits.append(deposit_entry)
 
             st.success(f"Waste: {waste}")
             st.success(f"Weight: {weight} g")
@@ -152,14 +154,19 @@ if st.button("🗑 Waste Deposited"):
 st.info(f"♻ Total Waste: {st.session_state.users[user]['weight']} g")
 st.info(f"⭐ Total Points: {int(st.session_state.users[user]['points'])}")
 
-# ---------------- LAST DEPOSIT ----------------
-st.subheader("🧾 Last Deposit")
+# ---------------- USER DEPOSIT HISTORY ----------------
+st.subheader("📜 My Deposit History")
 
-if st.session_state.deposits:
-    last = st.session_state.deposits[-1]
-    st.success(
-        f"{last['user']} deposited {last['weight']} g of {last['waste']} at {last['time']}"
-    )
+user_deposits = [
+    d for d in reversed(st.session_state.deposits)
+    if d["user"] == user
+]
+
+if user_deposits:
+    for d in user_deposits[:5]:  # show last 5
+        st.write(
+            f"• {d['time']} — {d['waste']} — {d['weight']} g"
+        )
 else:
     st.info("No deposits yet.")
 
