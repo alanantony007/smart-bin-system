@@ -4,7 +4,7 @@ from datetime import datetime
 
 # ---------------- CONFIG ----------------
 LOCAL_MODE = False          # True = local/bin demo | False = cloud demo
-BIN_ID = "BIN-01"           # 🔹 Change this to simulate another bin
+BIN_ID = "BIN-02"           # 🔹 Change this to simulate another bin
 USERS_FILE = "users.csv"
 COOLDOWN_SECONDS = 10
 
@@ -198,3 +198,4 @@ for i, (u, d) in enumerate(
     1
 ):
     st.write(f"{i}. {u} — {int(d['points'])} pts")
+
