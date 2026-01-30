@@ -23,7 +23,7 @@ GIFT_CARDS = {
     "🍔 Zomato Gift Card (₹200)": 200
 }
 
-# ---------------- APP SETUP ----------------
+# ---------------- PAGE SETUP ----------------
 st.set_page_config(page_title="Smart Bin System")
 st.title("♻ Smart Waste Bin – Eco Rewards")
 st.caption(f"🗑 Active Bin: {BIN_ID}")
@@ -65,7 +65,6 @@ def load_users():
                 }
     return users
 
-
 def save_users(users):
     with open(USERS_FILE, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=["user", "weight", "points"])
@@ -86,6 +85,9 @@ if "users" not in st.session_state:
 if user not in st.session_state.users:
     st.session_state.users[user] = {"weight": 0, "points": 0}
     save_users(st.session_state.users)
+
+if "deposits" not in st.session_state:
+    st.session_state.deposits = []
 
 if "last_deposit_time" not in st.session_state:
     st.session_state.last_deposit_time = 0
@@ -117,16 +119,51 @@ if st.button("Deposit Waste"):
         st.session_state.users[user]["points"] += points
         save_users(st.session_state.users)
 
+        st.session_state.deposits.append({
+            "user": user,
+            "bin": BIN_ID,
+            "waste": waste,
+            "weight": weight,
+            "time": datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+        })
+
         st.success(f"Deposited {weight} g of {waste}")
         st.success(f"Points Earned: {points}")
 
 # ---------------- WALLET ----------------
 points_balance = st.session_state.users[user]["points"]
-rupee_balance = points_balance / POINTS_PER_RUPEE
+rupees_balance = points_balance / POINTS_PER_RUPEE
 
 st.subheader("💰 Wallet")
 st.info(f"Points Balance: {points_balance}")
-st.info(f"Equivalent Value: ₹{rupee_balance:.2f}")
+st.info(f"Equivalent Value: ₹{rupees_balance:.2f}")
+
+# ---------------- USER RANK ----------------
+sorted_users = sorted(
+    st.session_state.users.items(),
+    key=lambda x: x[1]["points"],
+    reverse=True
+)
+
+rank = next(i + 1 for i, (u, _) in enumerate(sorted_users) if u == user)
+
+medal = "🥇" if rank == 1 else "🥈" if rank == 2 else "🥉" if rank == 3 else ""
+
+st.subheader("🏅 Your Rank")
+st.success(f"Rank: #{rank} {medal}")
+
+# ---------------- USER DEPOSIT HISTORY ----------------
+st.subheader("📜 My Deposit History")
+
+user_deposits = [d for d in reversed(st.session_state.deposits) if d["user"] == user]
+
+if user_deposits:
+    for d in user_deposits[:5]:
+        st.write(
+            f"• {d['time']} — {d['waste']} — {d['weight']} g — {d['bin']}"
+        )
+else:
+    st.info("No deposits yet.")
 
 # ---------------- REDEEM SECTION ----------------
 st.subheader("🎁 Redeem Rewards")
@@ -136,7 +173,7 @@ redeem_type = st.radio(
     ["🏦 Bank Transfer", "🎟 Entertainment Coupons", "🛒 Gift Cards"]
 )
 
-# ---- Bank Transfer ----
+# Bank redeem
 if redeem_type == "🏦 Bank Transfer":
     amount = st.number_input("Enter amount (₹)", min_value=0, step=1)
     required_points = amount * POINTS_PER_RUPEE
@@ -149,9 +186,9 @@ if redeem_type == "🏦 Bank Transfer":
         else:
             st.session_state.users[user]["points"] -= required_points
             save_users(st.session_state.users)
-            st.success(f"✅ ₹{amount} credited to bank (simulated)")
+            st.success(f"₹{amount} credited to bank (simulated)")
 
-# ---- Entertainment Coupons ----
+# Entertainment coupons
 elif redeem_type == "🎟 Entertainment Coupons":
     reward = st.selectbox("Select coupon", list(ENTERTAINMENT_REWARDS.keys()))
     rupees = ENTERTAINMENT_REWARDS[reward]
@@ -163,9 +200,9 @@ elif redeem_type == "🎟 Entertainment Coupons":
         else:
             st.session_state.users[user]["points"] -= required_points
             save_users(st.session_state.users)
-            st.success(f"🎉 {reward} issued successfully!")
+            st.success(f"{reward} issued successfully!")
 
-# ---- Gift Cards ----
+# Gift cards
 else:
     reward = st.selectbox("Select gift card", list(GIFT_CARDS.keys()))
     rupees = GIFT_CARDS[reward]
@@ -177,17 +214,11 @@ else:
         else:
             st.session_state.users[user]["points"] -= required_points
             save_users(st.session_state.users)
-            st.success(f"🎁 {reward} issued successfully!")
+            st.success(f"{reward} issued successfully!")
 
 # ---------------- LEADERBOARD ----------------
 st.divider()
 st.subheader("🏆 Leaderboard")
-
-sorted_users = sorted(
-    st.session_state.users.items(),
-    key=lambda x: x[1]["points"],
-    reverse=True
-)
 
 for i, (u, d) in enumerate(sorted_users, 1):
     st.write(f"{i}. {u} — {d['points']} pts")
