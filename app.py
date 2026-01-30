@@ -1,115 +1,121 @@
 import streamlit as st
 import random, time
+from datetime import datetime
 
 st.set_page_config(page_title="Smart Bin System")
 
 st.title("♻ Smart Waste Bin – Eco Rewards")
 
-# 🌐 Public Streamlit App URL
-APP_URL = "https://smart-bin-system.streamlit.app"
+# ---------------- LOGIN CONTROL ----------------
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
-# ---------------- CONNECT SECTION ----------------
-st.subheader("📱 Connect to Smart Bin")
+# ---------------- LOGIN PAGE ----------------
+if not st.session_state.logged_in:
+    st.subheader("🔐 Login to Continue")
+    st.markdown("📱 *Scan the QR code on the bin to open this page*")
 
-st.markdown(
-    f"""
-    🔗 **Scan or tap this link to connect:**  
-    [{APP_URL}]({APP_URL})
-    """
-)
+    username = st.text_input("Enter your username")
 
-st.info("📌 In real deployment, this link is accessed via a QR code on the bin.")
+    if st.button("Login"):
+        if username.strip() == "":
+            st.warning("Username cannot be empty")
+        else:
+            st.session_state.logged_in = True
+            st.session_state.user = username
+            st.success(f"Welcome {username} 🌱")
+            st.rerun()
 
-# --------- Waste detection reader ----------
-def get_detected_waste():
-    try:
-        with open("detected_waste.txt", "r") as f:
-            waste = f.read().strip()
-            if waste in ["Plastic", "Metal", "Paper"]:
-                return waste
-            else:
-                return None
-    except:
-        return None
+    st.stop()  # ⛔ Do NOT show dashboard before login
 
-# --------- User system ----------
+# ---------------- USER INITIALIZATION ----------------
+user = st.session_state.user
+
 if "users" not in st.session_state:
     st.session_state.users = {}
-
-user = st.query_params.get("user", "EcoUser")
 
 if user not in st.session_state.users:
     st.session_state.users[user] = {"weight": 0, "points": 0}
 
-st.success(f"Connected as {user} 🌱")
+# ---------------- DEPOSIT LOG ----------------
+if "deposits" not in st.session_state:
+    st.session_state.deposits = []
 
-# --------- Live Waste Detection ----------
-current_waste = get_detected_waste()
+st.success(f"Connected as {user} 🌿")
+
+# ---------------- WASTE DETECTION (SIMULATED) ----------------
+def get_detected_waste():
+    # In real deployment: camera + sensors
+    return random.choice(["Plastic", "Metal", "Paper"])
 
 st.subheader("🔍 Live Waste Detection")
+st.info("Waiting for waste...")
 
-if current_waste:
-    st.success(f"Detected: {current_waste}")
-else:
-    st.info("Waiting for waste...")
-
-# --------- Smart bin automation ----------
+# ---------------- BIN ACTION ----------------
 if st.button("🗑 Waste Deposited"):
 
     st.write("Detecting waste...")
     time.sleep(1)
 
     waste = get_detected_waste()
+    weight = random.randint(100, 700)
 
-    if waste is None:
-        st.warning("⚠️ No waste detected yet. Please insert waste.")
+    if waste == "Plastic":
+        points = weight * 1
+    elif waste == "Metal":
+        points = weight * 2
     else:
-        st.write("Measuring weight...")
-        time.sleep(1)
+        points = weight * 0.5
 
-        weight = random.randint(100, 700)
+    # Update user stats
+    st.session_state.users[user]["weight"] += weight
+    st.session_state.users[user]["points"] += points
 
-        if waste == "Plastic":
-            points = weight * 1
-        elif waste == "Metal":
-            points = weight * 2
-        else:
-            points = weight * 0.5
+    # Log deposit
+    st.session_state.deposits.append({
+        "user": user,
+        "waste": waste,
+        "weight": weight,
+        "time": datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+    })
 
-        st.session_state.users[user]["weight"] += weight
-        st.session_state.users[user]["points"] += points
+    st.success(f"Detected Waste: {waste}")
+    st.success(f"Weight: {weight} g")
+    st.warning(f"Points Earned: {int(points)}")
 
-        st.success(f"Detected: {waste}")
-        st.success(f"Weight: {weight} g")
-        st.warning(f"Points earned: {int(points)}")
-
-# --------- User stats ----------
-st.info(f"♻ Total Waste: {int(st.session_state.users[user]['weight'])} g")
+# ---------------- USER STATS ----------------
+st.info(f"♻ Total Waste Deposited: {st.session_state.users[user]['weight']} g")
 st.info(f"⭐ Total Points: {int(st.session_state.users[user]['points'])}")
 
+# ---------------- LAST DEPOSIT ----------------
+st.subheader("🧾 Last Deposit")
+
+if st.session_state.deposits:
+    last = st.session_state.deposits[-1]
+    st.success(
+        f"{last['user']} deposited {last['weight']} g of {last['waste']} waste at {last['time']}"
+    )
+else:
+    st.info("No deposits yet.")
+
+# ---------------- ECO IMPACT ----------------
 st.divider()
 
-# --------- Eco Impact ----------
 total_weight = sum(u["weight"] for u in st.session_state.users.values())
 total_kg = total_weight / 1000
 
-co2_saved = total_kg * 1.5
-trees_saved = total_kg * 0.02
-
 st.subheader("🌱 Eco Impact Dashboard")
-st.metric("♻ Total Waste Recycled", f"{total_kg:.2f} kg")
-st.metric("🌍 CO₂ Saved", f"{co2_saved:.2f} kg")
-st.metric("🌳 Trees Saved", f"{trees_saved:.2f}")
+st.metric("Total Waste Recycled", f"{total_kg:.2f} kg")
+st.metric("CO₂ Saved", f"{total_kg * 1.5:.2f} kg")
+st.metric("Trees Saved", f"{total_kg * 0.02:.2f}")
 
-# --------- Leaderboard ----------
+# ---------------- LEADERBOARD ----------------
 st.subheader("🏆 Leaderboard")
 
 for i, (u, d) in enumerate(
-    sorted(
-        st.session_state.users.items(),
-        key=lambda x: x[1]["points"],
-        reverse=True
-    ),
+    sorted(st.session_state.users.items(),
+           key=lambda x: x[1]["points"],
+           reverse=True),
     1
 ):
     st.write(f"{i}. {u} — {int(d['points'])} pts")
