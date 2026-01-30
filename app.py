@@ -5,6 +5,7 @@ from datetime import datetime
 # ---------------- CONFIG ----------------
 LOCAL_MODE = False   # True = local/bin demo | False = cloud demo
 USERS_FILE = "users.csv"
+COOLDOWN_SECONDS = 10
 
 st.set_page_config(page_title="Smart Bin System")
 st.title("♻ Smart Waste Bin – Eco Rewards")
@@ -35,7 +36,7 @@ if not st.session_state.logged_in:
             st.success(f"Welcome {username} 🌱")
             st.rerun()
 
-    st.stop()   # ⛔ Stop before dashboard
+    st.stop()
 
 # ---------------- CSV HELPERS ----------------
 def load_users():
@@ -75,6 +76,9 @@ if user not in st.session_state.users:
 if "deposits" not in st.session_state:
     st.session_state.deposits = []
 
+if "last_deposit_time" not in st.session_state:
+    st.session_state.last_deposit_time = 0
+
 st.success(f"Connected as {user} 🌿")
 
 # ---------------- LOGOUT ----------------
@@ -105,37 +109,44 @@ if current_waste:
 else:
     st.info("Waiting for waste...")
 
-# ---------------- BIN ACTION ----------------
+# ---------------- BIN ACTION (WITH COOLDOWN) ----------------
 if st.button("🗑 Waste Deposited"):
-    time.sleep(1)
-    waste = get_detected_waste()
+    now = time.time()
+    elapsed = now - st.session_state.last_deposit_time
 
-    if waste is None:
-        st.warning("No waste detected")
+    if elapsed < COOLDOWN_SECONDS:
+        remaining = int(COOLDOWN_SECONDS - elapsed)
+        st.warning(f"⏳ Please wait {remaining} seconds before next deposit")
     else:
-        weight = random.randint(100, 700)
+        st.session_state.last_deposit_time = now
 
-        if waste == "Plastic":
-            points = weight * 1
-        elif waste == "Metal":
-            points = weight * 2
+        waste = get_detected_waste()
+        if waste is None:
+            st.warning("No waste detected")
         else:
-            points = weight * 0.5
+            weight = random.randint(100, 700)
 
-        st.session_state.users[user]["weight"] += weight
-        st.session_state.users[user]["points"] += points
-        save_users(st.session_state.users)
+            if waste == "Plastic":
+                points = weight * 1
+            elif waste == "Metal":
+                points = weight * 2
+            else:
+                points = weight * 0.5
 
-        st.session_state.deposits.append({
-            "user": user,
-            "waste": waste,
-            "weight": weight,
-            "time": datetime.now().strftime("%d-%m-%Y %H:%M:%S")
-        })
+            st.session_state.users[user]["weight"] += weight
+            st.session_state.users[user]["points"] += points
+            save_users(st.session_state.users)
 
-        st.success(f"Waste: {waste}")
-        st.success(f"Weight: {weight} g")
-        st.success(f"Points Earned: {int(points)}")
+            st.session_state.deposits.append({
+                "user": user,
+                "waste": waste,
+                "weight": weight,
+                "time": datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+            })
+
+            st.success(f"Waste: {waste}")
+            st.success(f"Weight: {weight} g")
+            st.success(f"Points Earned: {int(points)}")
 
 # ---------------- USER STATS ----------------
 st.info(f"♻ Total Waste: {st.session_state.users[user]['weight']} g")
