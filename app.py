@@ -4,13 +4,12 @@ from datetime import datetime
 
 # ---------------- CONFIG ----------------
 LOCAL_MODE = False          # True = local/bin demo | False = cloud demo
-BIN_ID = "BIN-02"           # 🔹 Change this to simulate another bin
+BIN_ID = "BIN-01"           # Change to simulate another bin
 USERS_FILE = "users.csv"
 COOLDOWN_SECONDS = 10
 
 st.set_page_config(page_title="Smart Bin System")
 st.title("♻ Smart Waste Bin – Eco Rewards")
-
 st.caption(f"🗑 Active Bin: {BIN_ID}")
 
 # ---------------- AUTO LOGIN VIA QR ----------------
@@ -140,15 +139,13 @@ if st.button("🗑 Waste Deposited"):
             st.session_state.users[user]["points"] += points
             save_users(st.session_state.users)
 
-            deposit_entry = {
+            st.session_state.deposits.append({
                 "user": user,
                 "bin": BIN_ID,
                 "waste": waste,
                 "weight": weight,
                 "time": datetime.now().strftime("%d-%m-%Y %H:%M:%S")
-            }
-
-            st.session_state.deposits.append(deposit_entry)
+            })
 
             st.success(f"Waste: {waste}")
             st.success(f"Weight: {weight} g")
@@ -158,6 +155,30 @@ if st.button("🗑 Waste Deposited"):
 # ---------------- USER STATS ----------------
 st.info(f"♻ Total Waste: {st.session_state.users[user]['weight']} g")
 st.info(f"⭐ Total Points: {int(st.session_state.users[user]['points'])}")
+
+# ---------------- USER RANK ----------------
+sorted_users = sorted(
+    st.session_state.users.items(),
+    key=lambda x: x[1]["points"],
+    reverse=True
+)
+
+rank = next(
+    (i + 1 for i, (u, _) in enumerate(sorted_users) if u == user),
+    None
+)
+
+if rank == 1:
+    medal = "🥇"
+elif rank == 2:
+    medal = "🥈"
+elif rank == 3:
+    medal = "🥉"
+else:
+    medal = ""
+
+st.subheader("🏅 Your Rank")
+st.success(f"Rank: #{rank} {medal}")
 
 # ---------------- USER DEPOSIT HISTORY ----------------
 st.subheader("📜 My Deposit History")
@@ -189,13 +210,5 @@ st.metric("Trees Saved", f"{total_kg * 0.02:.2f}")
 # ---------------- LEADERBOARD ----------------
 st.subheader("🏆 Leaderboard (Top Recyclers)")
 
-for i, (u, d) in enumerate(
-    sorted(
-        st.session_state.users.items(),
-        key=lambda x: x[1]["points"],
-        reverse=True
-    ),
-    1
-):
+for i, (u, d) in enumerate(sorted_users, 1):
     st.write(f"{i}. {u} — {int(d['points'])} pts")
-
